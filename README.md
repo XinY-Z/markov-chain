@@ -57,6 +57,9 @@ source('getMarkov.R')
 ```
 
 ## Example result
+The first column is the session ID, the following columns are code sequences and their
+transition probabilities, e.g., a probability of transitioning from MOOD code to ADW code
+in session 8510 is 0.00311.
 ```txt
 session     MOOD2ADP     MOOD2ADW     MOOD2AF     MOOD2CO      ...
    8430      0.00000      0.00000     0.02272     0.00000      ...
