@@ -4,8 +4,8 @@ source('utils.R')
 
 
 ## set options
-INPUT_PATH <- r'(C:\Users\XinZ\Box\DATA\Projects\xin_temp\daap\miscglobalsmerged_daap_session_033122.csv)'
-OUTPUT_PATH <- r'(C:\Users\XinZ\Box\DATA\Projects\xin_temp\daap\miscglobalsmerged_daap_010123.csv)'
+INPUT_PATH <- <path to your dataset>
+OUTPUT_PATH <- <path to save your processed data>
 SESSION_ID <- 'session'   # column name for session ID
 TOPIC <- 'REC'            # focus on code REC
 CONCAT <- F               # consider therapist codes that co-occur or not
@@ -58,6 +58,7 @@ for(i in unique(dt[, SESSION_ID, with=F])) {
 }
 
 ## combine the filled-out table with original data table
+## This will attach the transition matrix back to your original dataset
 dt <- dic[dt, on=SESSION_ID]
 
 ## export the file
