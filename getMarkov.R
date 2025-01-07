@@ -57,9 +57,6 @@ for(i in unique(dt[, SESSION_ID, with=F])) {
   assignProb(sel, dic, STARTWITH, TOPIC, CONCAT)
 }
 
-## session 8940 did not talk about <TOPIC>, delete it
-dic <- dic[N!=0]
-
 ## combine the filled-out table with original data table
 dt <- dic[dt, on=SESSION_ID]
 
