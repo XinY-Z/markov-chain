@@ -1,15 +1,26 @@
-library(stringr)    # process strings
+# This script contains functions to extract Markov chain transition probabilities
+# as client and therapist alternate in talk turns
+
+library(stringr)
 library(data.table)
 
-dt <- fread(r'(C:\Users\XinZ\Box\DATA\Projects\xin_temp\daap\miscglobalsmerged_daap_session_033122.csv)')
+
+## set options ####
+LABEL <- 'code'           # column name for categorical codes
+SESSION_ID <- 'session'   # column name for session ID
+SPEAKER <- 'speaker'      # column name for speaker
+THERAPIST <- 'T'          # therapist label
+CLIENT <- 'P'             # client label
+CONCAT <- F               # consider codes that co-occur or not
+
 
 ## proprocess dataset ####
 ## split concatenated behavioral codes
 dtPreprocess <- function(DT) {
-  splits <- as.data.table(DT[, str_split(code, ',', simplify = T)])
+  splits <- as.data.table(DT[, str_split(get(LABEL), ',', simplify = T)])
   names(splits) <- paste0('code', 1:ncol(splits))
   combined <- cbind(DT, splits)
-  sel <- combined[, .SD, .SDcols=c('session', 'speaker', names(splits))]
+  sel <- combined[, .SD, .SDcols=c(SESSION_ID, SPEAKER, names(splits))]
   return(sel)
 }
 
@@ -34,7 +45,7 @@ combineCode <- function(codes) {
   return(temps)
 }
 
-concatCode <- function(codes, concat) {
+concatCode <- function(codes, concat=CONCAT) {
   sorted <- str_subset(str_sort(unlist(codes)), '.+')
   if(concat) {
     temps <- combineCode(sorted)  
@@ -44,7 +55,7 @@ concatCode <- function(codes, concat) {
 }
 
 ## define how to identify code sequence of two
-extractSequence <- function(unit, concat) {
+extractSequence <- function(unit, concat=CONCAT) {
   temps <- c()
   row1 <- concatCode(unit[1], concat)
   row2 <- concatCode(unit[2], concat)
@@ -58,11 +69,11 @@ extractSequence <- function(unit, concat) {
 }
 
 ## identify sequences of codes in a session
-mapSequence <- function(input, startWith, concat) {
+mapSequence <- function(input, startWith, concat=CONCAT) {
   temps <- c()
   for(i in 1:(nrow(input)-2)) {
     if(input[i, speaker] == startWith) {
-      unit <- input[i:(i+1), .SD, .SDcols=!'speaker']
+      unit <- input[i:(i+1), .SD, .SDcols=!SPEAKER]
       temp <- extractSequence(unit, concat)
       temps <- c(temps, temp)
     }
@@ -71,7 +82,7 @@ mapSequence <- function(input, startWith, concat) {
 }
 
 ## count the transition sequences
-countSequence <- function(input, startWith, concat=T) {
+countSequence <- function(input, startWith, concat=CONCAT) {
   table(mapSequence(input, startWith, concat))
 }
 
@@ -90,18 +101,18 @@ focusTopic <- function(tab, topic) {
 }
 
 ## create a dictionary
-createDic <- function(DT, topic, startWith, concat=T) {
+createDic <- function(DT, topic, startWith, concat=CONCAT) {
   ## collect all therapist codes
   thCodes <- unique(
     concatCode(
-      dtPreprocess(DT)[speaker=='T', .SD, .SDcols=!c('session', 'speaker')],
+      dtPreprocess(DT)[speaker==THERAPIST, .SD, .SDcols=!c(SESSION_ID, SPEAKER)],
       concat=F
     )
   )
   ## collect all client codes
   ctCodes <- unique(
     concatCode(
-      dtPreprocess(DT)[speaker=='P', .SD, .SDcols=!c('session', 'speaker')],
+      dtPreprocess(DT)[speaker==CLIENT, .SD, .SDcols=!c(SESSION_ID, SPEAKER)],
       concat=F
     )
   )
@@ -116,13 +127,13 @@ createDic <- function(DT, topic, startWith, concat=T) {
   outputs <- c()
   if(topic %in% ctCodes) {
     for(i in 1:length(thCodes)) {
-      output <- if(startWith=='P') paste0(topic, '2', thCodes[i]) else paste0(thCodes[i], '2', topic)
+      output <- if(startWith==CLIENT) paste0(topic, '2', thCodes[i]) else paste0(thCodes[i], '2', topic)
       outputs <- c(outputs, output)
     }
   }
   else if(topic %in% thCodes) {
     for(i in 1:length(ctCodes)) {
-      output <- if(startWith=='P') paste0(ctCodes[i], '2', topic) else paste0(topic, '2', ctCodes[i])
+      output <- if(startWith==CLIENT) paste0(ctCodes[i], '2', topic) else paste0(topic, '2', ctCodes[i])
       outputs <- c(outputs, output)
     }
   }
@@ -132,13 +143,13 @@ createDic <- function(DT, topic, startWith, concat=T) {
 
 ## check ####
 ## select sessions for testing
-sel <- dt[ccaps_di < quantile(ccaps_di, .15, na.rm=T)][session==sample(session, 1)]
-sel <- dtPreprocess(sel, 'code')
-
-## count identified sequences of codes
+# sel <- dt[ccaps_di < quantile(ccaps_di, .15, na.rm=T)][session==sample(session, 1)]
+# sel <- dtPreprocess(sel)
+# 
+# ## count identified sequences of codes
 # temp <- countSequence(
-#   sel[, .SD, .SDcols=!'session'], 
-#   startWith='T', concat=F
+#  sel[, .SD, .SDcols=!'session'], 
+#  startWith='T', concat=F
 # )
 # temp[order(-temp)][1:10]
 # 
